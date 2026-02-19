@@ -8,9 +8,9 @@ from babel.numbers import format_currency
 # 1. LOAD DATA
 # ==============================
 
-rfm_df = pd.read_csv("rfm_df.csv")
-product_order_df = pd.read_csv("product_order_items_orders.csv")
-orders_df = pd.read_csv("orders.csv")
+rfm_df = pd.read_csv("dashboard/rfm_df.csv")
+product_order_df = pd.read_csv("dashboard/product_order_items_orders.csv")
+orders_df = pd.read_csv("dashboard/orders.csv")
 
 # Pastikan kolom tanggal berformat datetime
 datetime_cols = ["order_purchase_timestamp"]
