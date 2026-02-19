@@ -1,5 +1,9 @@
 # Olist E-Commerce Data Analysis Dashboard 📊
 
+## Live Dashboard
+You can access the interactive dashboard here:
+**[Olist Data Analysis Dashboard](https://project-data-analysis-olist-pkaqnwmucd8ydoxjdaxmxd.streamlit.app/)**
+
 ## Project Structure
 - `dashboard/`: Contains the main dashboard script and the processed dataset.
 - `data/`: Contains the raw CSV files used for analysis.
