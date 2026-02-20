@@ -8,9 +8,11 @@ from babel.numbers import format_currency
 # 1. LOAD DATA
 # ==============================
 
+rfm_raw_data = pd.read_csv("dashboard/rfm_raw_data.csv")
 rfm_df = pd.read_csv("dashboard/rfm_df.csv")
 product_order_df = pd.read_csv("dashboard/product_order_items_orders.csv")
 orders_df = pd.read_csv("dashboard/orders.csv")
+
 
 # Pastikan kolom tanggal berformat datetime
 datetime_cols = ["order_purchase_timestamp"]
@@ -19,6 +21,8 @@ for col in datetime_cols:
         orders_df[col] = pd.to_datetime(orders_df[col])
     if col in product_order_df.columns:
         product_order_df[col] = pd.to_datetime(product_order_df[col])
+    if col in rfm_raw_data.columns:
+        rfm_raw_data[col] = pd.to_datetime(rfm_raw_data[col])
 
 # ==============================
 # 2. SIDEBAR (FILTER TANGGAL)
@@ -43,6 +47,10 @@ main_orders = orders_df[(orders_df["order_purchase_timestamp"] >= str(start_date
 main_product_order = product_order_df[(product_order_df["order_purchase_timestamp"] >= str(start_date)) & 
                                       (product_order_df["order_purchase_timestamp"] <= str(end_date))]
 
+main_rfm_raw_data = rfm_raw_data[(rfm_raw_data["order_purchase_timestamp"] >= str(start_date)) & 
+                                      (rfm_raw_data["order_purchase_timestamp"] <= str(end_date))]
+
+
 # ==============================
 # 3. DASHBOARD 
 # ==============================
@@ -52,7 +60,7 @@ st.header('Olist E-Commerce Dashboard :sparkles:')
 
 st.subheader("Monthly Delivered Orders Trend")
 
-# Filter: Hanya ambil status 'delivered' (Gunakan .copy() agar aman)
+# Filter: Hanya ambil status 'delivered' 
 delivered_df = main_orders[main_orders['order_status'] == 'delivered'].copy()
 
 
@@ -81,7 +89,7 @@ sns.lineplot(
     ax=ax # Plot ke object axis Streamlit
 )
 
-# Styling Tambahan
+# 
 ax.set_title("Tren jumlah order yang berhasil terkirim (delivered) tiap bulan", fontsize=12)
 ax.set_xlabel("Bulan")
 ax.set_ylabel("Jumlah order terkirim")
@@ -92,17 +100,30 @@ ax.grid(True, linestyle='--', alpha=0.5)
 st.pyplot(fig)
 
 # --- SECTION 2: TOP & BOTTOM PRODUCTS ---
-st.subheader( "5 Best & Worst Selling Products")
+st.subheader( "5 Kategori produk terlaris dan kurang diminati")
+
 # Menghitung total terjual per kategori
-product_counts = main_product_order.groupby("product_category_name_english").order_id.nunique().sort_values(ascending=False).reset_index()
+product_sales_counts = main_product_order["product_category_name_english"].value_counts().reset_index()
+product_sales_counts.columns = ['product_category', 'total_sold']
+top_5_products = product_sales_counts.head(5).sort_values(by="total_sold", ascending = False) # 5 KATEGORI PRODUK TERLARIS
+bottom_5_products = product_sales_counts.tail(5).sort_values(by="total_sold", ascending =True) # 5 KATEGORI PRODUK KURANG DIMINATI
 
-fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(24, 10))
-sns.barplot(x="order_id", y="product_category_name_english", data=product_counts.head(5), palette="Blues_r", ax=ax[0])
-ax[0].set_title("5 Best Selling Products", fontsize=20)
+# VISUALISASI UNTUK 5 KATEGORI PRODUK TERLARIS
+fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 8))
+sns.barplot(x="total_sold", y="product_category", data=top_5_products, palette="Blues_d", ax=ax[0])
+ax[0].set_title("5 Kategori produk terlaris", fontsize=18)
+ax[0].set_xlabel("Jumlah terjual", fontsize = 12)
 
-sns.barplot(x="order_id", y="product_category_name_english", data=product_counts.tail(5).sort_values(by="order_id", ascending=True), palette="Reds_r", ax=ax[1])
-ax[1].set_title("5 Worst Selling Products", fontsize=20)
-ax[1].invert_xaxis(); ax[1].yaxis.set_label_position("right"); ax[1].yaxis.tick_right()
+# VISUALISASI UNTUK 5 KATEGORI KURANG DIMINATI
+sns.barplot(x="total_sold", y="product_category", data=bottom_5_products, palette="Reds_d", ax=ax[1])
+ax[1].set_title("5 Kategori produk kurang diminati", fontsize=18)
+ax[1].set_xlabel("Jumlah terjual", fontsize=12)
+ax[1].invert_xaxis() 
+ax[1].yaxis.set_label_position("right") 
+ax[1].yaxis.tick_right()
+
+plt.tight_layout()
+
 st.pyplot(fig)
 
 # --- SECTION 3: PURCHASE HOUR ---
@@ -111,7 +132,7 @@ hourly_counts = main_orders['purchase_hour'].value_counts().sort_index().reset_i
 hourly_counts.columns = ['hour', 'count']
 
 fig, ax = plt.subplots(figsize=(12, 6))
-sns.barplot(x='hour', y='count', data=hourly_counts, color="#90CAF9", ax=ax)
+sns.barplot(x='hour', y='count', data=hourly_counts, color="#72BCD4", ax=ax)
 ax.set_title("Jam-jam dimana customer menekan tombol beli", fontsize=15)
 st.pyplot(fig)
 
@@ -128,28 +149,45 @@ for i, (v, p) in enumerate(zip(top_10_rev.price, top_10_rev.percent)):
     ax.text(v, i, f' {p:.1f}%', va='center', fontweight='bold')
 st.pyplot(fig)
 
+
+
+# Prepare for RFM ANALYSIS
+rfm_date = main_rfm_raw_data['order_purchase_timestamp'].max() + pd.Timedelta(days=1)
+
+main_rfm_df = main_rfm_raw_data.groupby(by="customer_unique_id", as_index=False).agg({
+    "order_purchase_timestamp": "max", # untuk recency
+    "order_id": "nunique",             # frequency
+    "price": "sum"                     # monetary
+})
+
+main_rfm_df.columns = ["customer_id", "max_order_timestamp", "frequency", "monetary"]
+
+# Menghitung recency
+main_rfm_df["recency"] = (rfm_date - main_rfm_df["max_order_timestamp"]).dt.days
+main_rfm_df.drop("max_order_timestamp", axis=1, inplace=True)
+
 # --- SECTION 5: RFM ANALYSIS ---
 st.subheader("Best Customer Based on RFM Parameters")
-# Karena RFM biasanya dihitung dari data keseluruhan, kita panggil rfm_df
+
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("Avg Recency (days)", f"{rfm_df.recency.mean():.1f}")
+    st.metric("Avg Recency (days)", f"{main_rfm_df.recency.mean():.1f}")
 with col2:
-    st.metric("Avg Frequency", f"{rfm_df.frequency.mean():.2f}")
+    st.metric("Avg Frequency", f"{main_rfm_df.frequency.mean():.2f}")
 with col3:
-    st.metric("Avg Monetary", f"BRL {rfm_df.monetary.mean():,.0f}")
+    st.metric("Avg Monetary", f"BRL {main_rfm_df.monetary.mean():,.0f}")
 
 fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(40, 15))
-colors = ["#90CAF9", "#90CAF9", "#90CAF9", "#90CAF9", "#90CAF9"]
+colors = ["#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4"]
 
 # Top 5 Recency
-sns.barplot(y="customer_id", x="recency", data=rfm_df.sort_values(by="recency", ascending=True).head(5), palette=colors, ax=ax[0])
+sns.barplot(y="customer_id", x="recency", data=main_rfm_df.sort_values(by="recency", ascending=True).head(5), palette=colors, ax=ax[0])
 ax[0].set_title("By Recency (days)", fontsize=20)
 # Top 5 Frequency
-sns.barplot(y="customer_id", x="frequency", data=rfm_df.sort_values(by="frequency", ascending=False).head(5), palette=colors, ax=ax[1])
+sns.barplot(y="customer_id", x="frequency", data=main_rfm_df.sort_values(by="frequency", ascending=False).head(5), palette=colors, ax=ax[1])
 ax[1].set_title("By Frequency", fontsize=20)
 # Top 5 Monetary
-sns.barplot(y="customer_id", x="monetary", data=rfm_df.sort_values(by="monetary", ascending=False).head(5), palette=colors, ax=ax[2])
+sns.barplot(y="customer_id", x="monetary", data=main_rfm_df.sort_values(by="monetary", ascending=False).head(5), palette=colors, ax=ax[2])
 ax[2].set_title("By Monetary", fontsize=20)
 st.pyplot(fig)
 
