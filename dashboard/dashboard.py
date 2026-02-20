@@ -147,6 +147,13 @@ fig, ax = plt.subplots(figsize=(12, 6))
 sns.barplot(x='price', y='product_category_name_english', data=top_10_rev, palette="viridis", ax=ax)
 for i, (v, p) in enumerate(zip(top_10_rev.price, top_10_rev.percent)):
     ax.text(v, i, f' {p:.1f}%', va='center', fontweight='bold')
+
+plt.ticklabel_format(style='plain', axis='x')
+plt.xlabel('Total Revenue (BRL)', fontsize=12)
+plt.ylabel('Product Category', fontsize=12)
+plt.grid(axis='x', linestyle='--', alpha=0.5)
+plt.tight_layout()
+
 st.pyplot(fig)
 
 
