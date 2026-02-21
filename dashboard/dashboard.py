@@ -54,11 +54,11 @@ main_rfm_raw_data = rfm_raw_data[(rfm_raw_data["order_purchase_timestamp"] >= st
 # ==============================
 # 3. DASHBOARD 
 # ==============================
-st.header('Olist E-Commerce Dashboard :sparkles:')
+st.header('Olist E-Commerce Dashboard 2016 - 2018 :sparkles:')
 
 # --- SECTION 1: TREND DELIVERED ---
 
-st.subheader("Monthly Delivered Orders Trend")
+st.subheader("Monthly Delivered Orders Trend 2016 - 2018")
 
 # Filter: Hanya ambil status 'delivered' 
 delivered_df = main_orders[main_orders['order_status'] == 'delivered'].copy()
@@ -84,13 +84,13 @@ sns.lineplot(
     x='month_year', 
     y='total_orders_delivered', 
     marker='o', 
-    color='blue', 
+    color="#72BCD4", 
     linewidth=2,
     ax=ax # Plot ke object axis Streamlit
 )
 
 # 
-ax.set_title("Tren jumlah order yang berhasil terkirim (delivered) tiap bulan", fontsize=12)
+ax.set_title("Tren jumlah order yang berhasil terkirim (delivered) tiap bulan periode 2016 - 2018", fontsize=12)
 ax.set_xlabel("Bulan")
 ax.set_ylabel("Jumlah order terkirim")
 plt.xticks(rotation=45)
@@ -100,7 +100,7 @@ ax.grid(True, linestyle='--', alpha=0.5)
 st.pyplot(fig)
 
 # --- SECTION 2: TOP & BOTTOM PRODUCTS ---
-st.subheader( "5 Kategori produk terlaris dan kurang diminati")
+st.subheader( "Best and Worst Performing Product by Number of Sales")
 
 # Menghitung total terjual per kategori
 product_sales_counts = main_product_order["product_category_name_english"].value_counts().reset_index()
@@ -108,16 +108,25 @@ product_sales_counts.columns = ['product_category', 'total_sold']
 top_5_products = product_sales_counts.head(5).sort_values(by="total_sold", ascending = False) # 5 KATEGORI PRODUK TERLARIS
 bottom_5_products = product_sales_counts.tail(5).sort_values(by="total_sold", ascending =True) # 5 KATEGORI PRODUK KURANG DIMINATI
 
+# Custom warna
+warna = ["#72BCD4", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3"]
+
 # VISUALISASI UNTUK 5 KATEGORI PRODUK TERLARIS
 fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 8))
-sns.barplot(x="total_sold", y="product_category", data=top_5_products, palette="Blues_d", ax=ax[0])
-ax[0].set_title("5 Kategori produk terlaris", fontsize=18)
-ax[0].set_xlabel("Jumlah terjual", fontsize = 12)
+sns.barplot(x="total_sold", y="product_category", data=top_5_products, palette=warna, ax=ax[0])
+ax[0].set_title("5 Best performing product  2016 - 2018", fontsize=18)
+ax[0].set_xlabel("Jumlah terjual", fontsize = 18)
+ax[0].set_ylabel("Product category", fontsize = 18)
+ax[0].tick_params(axis='x', labelsize=18)
+ax[0].tick_params(axis='y', labelsize=18)
 
 # VISUALISASI UNTUK 5 KATEGORI KURANG DIMINATI
-sns.barplot(x="total_sold", y="product_category", data=bottom_5_products, palette="Reds_d", ax=ax[1])
-ax[1].set_title("5 Kategori produk kurang diminati", fontsize=18)
-ax[1].set_xlabel("Jumlah terjual", fontsize=12)
+sns.barplot(x="total_sold", y="product_category", data=bottom_5_products, palette=warna, ax=ax[1])
+ax[1].set_title("5 Worst performing product 2016 - 2018", fontsize=18)
+ax[1].set_xlabel("Jumlah terjual", fontsize=18)
+ax[1].set_ylabel("Product category", fontsize = 18)
+ax[1].tick_params(axis='y', labelsize=18)
+ax[1].tick_params(axis='x', labelsize=18)
 ax[1].invert_xaxis() 
 ax[1].yaxis.set_label_position("right") 
 ax[1].yaxis.tick_right()
@@ -133,18 +142,21 @@ hourly_counts.columns = ['hour', 'count']
 
 fig, ax = plt.subplots(figsize=(12, 6))
 sns.barplot(x='hour', y='count', data=hourly_counts, color="#72BCD4", ax=ax)
-ax.set_title("Jam-jam dimana customer menekan tombol beli", fontsize=15)
+ax.set_title("Jam-jam dimana customer menekan tombol beli periode 2016 - 2018", fontsize=15)
+plt.ylabel("Jumlah order")
 st.pyplot(fig)
 
 # --- SECTION 4: REVENUE CONTRIBUTION ---
-st.subheader("Top 10 Category by Revenue Contribution")
+st.subheader("Top 10 Category by Revenue Contribution 2016 - 2018")
 rev_per_cat = main_product_order.groupby('product_category_name_english')['price'].sum().reset_index()
 total_rev = rev_per_cat['price'].sum()
 rev_per_cat['percent'] = (rev_per_cat['price'] / total_rev) * 100
 top_10_rev = rev_per_cat.sort_values(by='price', ascending=False).head(10)
 
+colors_ = ["#72BCD4", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3", "#D3D3D3",  "#D3D3D3",  "#D3D3D3"]
+
 fig, ax = plt.subplots(figsize=(12, 6))
-sns.barplot(x='price', y='product_category_name_english', data=top_10_rev, palette="viridis", ax=ax)
+sns.barplot(x='price', y='product_category_name_english', data=top_10_rev, palette=colors_, ax=ax)
 for i, (v, p) in enumerate(zip(top_10_rev.price, top_10_rev.percent)):
     ax.text(v, i, f' {p:.1f}%', va='center', fontweight='bold')
 
@@ -155,7 +167,6 @@ plt.grid(axis='x', linestyle='--', alpha=0.5)
 plt.tight_layout()
 
 st.pyplot(fig)
-
 
 
 # Prepare for RFM ANALYSIS
@@ -184,18 +195,45 @@ with col2:
 with col3:
     st.metric("Avg Monetary", f"BRL {main_rfm_df.monetary.mean():,.0f}")
 
-fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(40, 15))
-colors = ["#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4"]
+# Membuat kanvas 
+fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(35, 15))
+colors = ["#72BCD4"] * 5
 
-# Top 5 Recency
-sns.barplot(y="customer_id", x="recency", data=main_rfm_df.sort_values(by="recency", ascending=True).head(5), palette=colors, ax=ax[0])
-ax[0].set_title("By Recency (days)", fontsize=20)
-# Top 5 Frequency
-sns.barplot(y="customer_id", x="frequency", data=main_rfm_df.sort_values(by="frequency", ascending=False).head(5), palette=colors, ax=ax[1])
-ax[1].set_title("By Frequency", fontsize=20)
-# Top 5 Monetary
-sns.barplot(y="customer_id", x="monetary", data=main_rfm_df.sort_values(by="monetary", ascending=False).head(5), palette=colors, ax=ax[2])
-ax[2].set_title("By Monetary", fontsize=20)
+# --- Mengambil 8 karakter terakhir ID agar chartnya readable ---
+rfm_plot_df = main_rfm_df.copy()
+rfm_plot_df['customer_id_short'] = rfm_plot_df['customer_id'].str[-8:]
+
+# 1. Top 5 Recency
+top_recency = rfm_plot_df.sort_values(by="recency", ascending=True).head(5)
+sns.barplot(y="customer_id_short", x="recency", data=top_recency, palette=colors, ax=ax[0])
+ax[0].set_title("By Recency (days)", fontsize=30)
+ax[0].set_ylabel("Customer ID (Suffix)", fontsize=25)
+ax[0].set_xlabel(None)
+ax[0].tick_params(axis='y', labelsize=25)
+ax[0].tick_params(axis='x', labelsize=20)
+
+# 2. Top 5 Frequency
+top_frequency = rfm_plot_df.sort_values(by="frequency", ascending=False).head(5)
+sns.barplot(y="customer_id_short", x="frequency", data=top_frequency, palette=colors, ax=ax[1])
+ax[1].set_title("By Frequency", fontsize=30)
+ax[1].set_ylabel(None) 
+ax[1].set_xlabel(None)
+ax[1].tick_params(axis='y', labelsize=25)
+ax[1].tick_params(axis='x', labelsize=20)
+
+# 3. Top 5 Monetary
+top_monetary = rfm_plot_df.sort_values(by="monetary", ascending=False).head(5)
+sns.barplot(y="customer_id_short", x="monetary", data=top_monetary, palette=colors, ax=ax[2])
+ax[2].set_title("By Monetary", fontsize=30)
+ax[2].set_ylabel(None)
+ax[2].set_xlabel(None)
+ax[2].tick_params(axis='y', labelsize=25)
+ax[2].tick_params(axis='x', labelsize=20)
+
+# Jarak horizontal antar grafik agar teks tidak menabrak bar di sebelah
+plt.subplots_adjust(wspace=0.4) 
+plt.tight_layout()
+
 st.pyplot(fig)
 
 st.caption('Olist Performance Analyzed by Greatly Hizkia Manua')
